@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Formatter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- For pop-up messages -->
+  </head>
+  <body
+    class="bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 font-sans flex items-center justify-center min-h-screen"
+  >
+    <!-- Main Card Container -->
+    <div class="w-full max-w-3xl bg-white shadow-lg rounded-lg p-8">
+      <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">
+        Code Formatter
+      </h1>
+
+      <!-- Code Formatting Form -->
+      <form id="codeForm" class="space-y-6">
+        <!-- Code Input -->
+        <div>
+          <textarea
+            id="codeInput"
+            rows="8"
+            class="w-full p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ease-in-out"
+            placeholder="Enter your code here..."
+          ></textarea>
+        </div>
+
+        <!-- Language Selector and Format Button -->
+        <div class="flex justify-between items-center">
+          <select
+            id="languageSelect"
+            class="w-2/5 p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ease-in-out"
+          >
+            <option value="python">Python</option>
+            <option value="css">CSS</option>
+            <option value="javascript">JavaScript</option>
+            <option value="html">HTML</option>
+            <option value="c">C</option>
+            <option value="cpp">C++</option>
+          </select>
+          <button
+            type="button"
+            onclick="submitCode()"
+            class="w-2/5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300 flex justify-center items-center space-x-2"
+          >
+            <span>Format Code</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                d="M3.9 3.9c.3-.3.7-.3 1 0l5 5c.3.3.3.7 0 1L4.9 14.9c-.3.3-.7.3-1 0l-5-5c-.3-.3-.3-.7 0-1l5-5zM10 6.4l2.7 2.7-1.4 1.4-2.7-2.7-2.7 2.7-1.4-1.4L10 6.4z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Loader (Hidden Initially) -->
+        <div id="loader" class="hidden text-center mt-4">
+          <svg
+            class="animate-spin h-10 w-10 text-blue-500 mx-auto"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v4m0 0v4m0 0v4m-4-4h4m4 0h4m0-4H8m0 0V4m0 0H4m4 0h4"
+            ></path>
+          </svg>
+          <p class="text-gray-600 mt-2">Formatting your code...</p>
+        </div>
+      </form>
+
+      <!-- Formatted Code Section -->
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-800">Formatted Code:</h2>
+        <pre
+          id="formattedCode"
+          class="bg-gray-100 p-4 border-2 border-gray-300 rounded-md mt-3"
+        ></pre>
+      </div>
+    </div>
+
+    <!-- Success/Failure Pop-up (using SweetAlert2) -->
+    <script>
+      // Function to get CSRF token from cookies
+      function getCsrfToken() {
+        let csrfToken = null;
+        const csrfCookie = document.cookie
+          .split(";")
+          .find((cookie) => cookie.trim().startsWith("csrftoken="));
+        if (csrfCookie) {
+          csrfToken = csrfCookie.split("=")[1];
+        }
+        return csrfToken;
+      }
+
+      // Function to handle form submission and send the code for formatting
+      async function submitCode() {
+        const code = document.getElementById("codeInput").value;
+        const language = document.getElementById("languageSelect").value;
+
+        // Check if code and language match
+        if (
+          language === "python" &&
+          !code.trim().startsWith("def") &&
+          !code.trim().startsWith("import")
+        ) {
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "It seems like your code is not in Python. Please choose the correct language!",
+          });
+          return;
+        }
+
+        // Show the loader
+        document.getElementById("loader").classList.remove("hidden");
+
+        // Hide formatted code output until formatting is done
+        document.getElementById("formattedCode").textContent = "";
+
+        const csrfToken = getCsrfToken();
+
+        const response = await fetch("/api/format/", {
+          method: "POST",
+          body: new URLSearchParams({ code: code, language: language }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": csrfToken,
+          },
+        });
+
+        const data = await response.json();
+
+        // Hide loader and show formatted code
+        document.getElementById("loader").classList.add("hidden");
+
+        if (data.formatted_code) {
+          document.getElementById("formattedCode").textContent =
+            data.formatted_code;
+        } else {
+          document.getElementById("formattedCode").textContent =
+            "Error: " + data.error;
+        }
+      }
+    </script>
+  </body>
+</html>
